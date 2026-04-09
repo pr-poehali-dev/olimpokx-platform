@@ -1,0 +1,60 @@
+{
+  "tests": [
+    {
+      "name": "GET exam results",
+      "method": "GET",
+      "path": "/?type=exam",
+      "headers": { "X-User-Id": "test_user_001" },
+      "expectedStatus": 200,
+      "expectedBody": "results",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "POST exam result",
+      "method": "POST",
+      "path": "/",
+      "headers": { "X-User-Id": "test_user_001" },
+      "body": {
+        "type": "exam",
+        "exam_id": 1,
+        "exam_title": "Охрана труда 2026",
+        "score": 90,
+        "correct_count": 9,
+        "total_questions": 10,
+        "time_spent": 1200,
+        "passed": true,
+        "answers": {}
+      },
+      "expectedStatus": 200,
+      "expectedBody": "ok",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "GET trainer results",
+      "method": "GET",
+      "path": "/?type=trainer",
+      "headers": { "X-User-Id": "test_user_001" },
+      "expectedStatus": 200,
+      "expectedBody": "results",
+      "bodyMatcher": "contains"
+    },
+    {
+      "name": "POST trainer result",
+      "method": "POST",
+      "path": "/",
+      "headers": { "X-User-Id": "test_user_001" },
+      "body": {
+        "type": "trainer",
+        "trainer_id": 1,
+        "trainer_title": "Тренажёр по охране труда",
+        "score": 85,
+        "correct_count": 3,
+        "total_steps": 4,
+        "time_spent": 900
+      },
+      "expectedStatus": 200,
+      "expectedBody": "ok",
+      "bodyMatcher": "contains"
+    }
+  ]
+}

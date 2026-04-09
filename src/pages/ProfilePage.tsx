@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+import { getExamHistory, getTrainerHistory, ExamResult, TrainerResult } from "@/lib/api";
 
 const certs = [
   { title: "Противодействие коррупции", date: "02 мар 2026", exp: "02 мар 2027", id: "CERT-2026-0312" },
@@ -17,6 +19,23 @@ const skillRadar = [
 ];
 
 export default function ProfilePage() {
+  const [examHistory, setExamHistory] = useState<ExamResult[]>([]);
+  const [trainerHistory, setTrainerHistory] = useState<TrainerResult[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([getExamHistory(), getTrainerHistory()])
+      .then(([exams, trainers]) => {
+        setExamHistory(exams);
+        setTrainerHistory(trainers);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const avgExamScore = examHistory.length > 0
+    ? Math.round(examHistory.reduce((a, r) => a + r.score, 0) / examHistory.length)
+    : null;
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       <h1 className="text-2xl font-semibold text-foreground">Личный кабинет</h1>
@@ -115,6 +134,60 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* History from DB */}
+      {!loading && (examHistory.length > 0 || trainerHistory.length > 0) && (
+        <div className="grid lg:grid-cols-2 gap-5">
+          {examHistory.length > 0 && (
+            <div className="corp-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-foreground">История экзаменов</h2>
+                {avgExamScore !== null && (
+                  <span className="text-xs font-mono text-primary">Ср. балл: {avgExamScore}</span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {examHistory.slice(0, 5).map(r => (
+                  <div key={r.id} className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+                    <Icon name={r.passed ? "CheckCircle" : "XCircle"} size={13}
+                      className={r.passed ? "text-green-400" : "text-red-400"} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-foreground truncate">{r.exam_title}</div>
+                      <div className="text-xs font-mono text-muted-foreground">
+                        {r.correct_count}/{r.total_questions} верных
+                      </div>
+                    </div>
+                    <span className={`text-sm font-mono font-semibold ${r.passed ? "text-green-400" : "text-red-400"}`}>
+                      {r.score}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {trainerHistory.length > 0 && (
+            <div className="corp-card p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">История тренажёров</h2>
+              <div className="space-y-2">
+                {trainerHistory.slice(0, 5).map(r => (
+                  <div key={r.id} className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0">
+                    <Icon name="Dumbbell" size={13} className="text-primary" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-foreground truncate">{r.trainer_title}</div>
+                      <div className="text-xs font-mono text-muted-foreground">
+                        {r.correct_count}/{r.total_steps} заданий
+                      </div>
+                    </div>
+                    <span className={`text-sm font-mono font-semibold ${r.score >= 75 ? "text-green-400" : "text-yellow-400"}`}>
+                      {r.score}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

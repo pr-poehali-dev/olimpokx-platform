@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
+import { saveTrainerResult } from "@/lib/api";
 
 interface TrainerStep {
   id: number;
@@ -304,6 +305,14 @@ export default function TrainerModule({ config, onClose, onComplete }: TrainerMo
         : 100;
       onComplete(score);
       setPhase("complete");
+      saveTrainerResult({
+        trainer_id: config.id,
+        trainer_title: config.title,
+        score,
+        correct_count: correct,
+        total_steps: interactiveSteps.length,
+        time_spent: elapsed,
+      });
     }
   };
 

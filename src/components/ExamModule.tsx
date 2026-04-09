@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
+import { saveExamResult } from "@/lib/api";
 
 interface Question {
   id: number;
@@ -162,17 +163,41 @@ export default function ExamModule({ config = defaultExam, onClose }: ExamModule
   const [timeLeft, setTimeLeft] = useState(config.duration);
   const [showExplanation, setShowExplanation] = useState(false);
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
 
   const q = config.questions[current];
   const totalQ = config.questions.length;
 
+  const finishExam = useCallback((currentAnswers: Record<number, number>, spentTime: number) => {
+    const correct = Object.entries(currentAnswers).filter(
+      ([idx, ans]) => config.questions[Number(idx)].correct === ans
+    ).length;
+    const finalScore = Math.round((correct / totalQ) * 100);
+    const passed = finalScore >= config.passingScore;
+    setPhase("result");
+    setSaving(true);
+    saveExamResult({
+      exam_id: 1,
+      exam_title: config.title,
+      score: finalScore,
+      correct_count: correct,
+      total_questions: totalQ,
+      time_spent: spentTime,
+      passed,
+      answers: currentAnswers,
+    }).finally(() => setSaving(false));
+  }, [config, totalQ]);
+
   // Timer
   useEffect(() => {
     if (phase !== "exam") return;
-    if (timeLeft <= 0) { setPhase("result"); return; }
+    if (timeLeft <= 0) {
+      finishExam(answers, config.duration);
+      return;
+    }
     const t = setInterval(() => setTimeLeft(s => s - 1), 1000);
     return () => clearInterval(t);
-  }, [phase, timeLeft]);
+  }, [phase, timeLeft, finishExam, answers, config.duration]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -194,7 +219,7 @@ export default function ExamModule({ config = defaultExam, onClose }: ExamModule
     if (current < totalQ - 1) {
       setCurrent(c => c + 1);
     } else {
-      setPhase("result");
+      finishExam(answers, config.duration - timeLeft);
     }
   };
 
@@ -296,6 +321,18 @@ export default function ExamModule({ config = defaultExam, onClose }: ExamModule
                 ? "Поздравляем! Сертификат будет доступен в личном кабинете."
                 : `Для прохождения необходимо набрать ${config.passingScore}%. Попробуйте ещё раз.`}
             </p>
+            {saving && (
+              <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-muted-foreground">
+                <Icon name="Loader2" size={12} className="animate-spin" />
+                Сохраняем результат...
+              </div>
+            )}
+            {!saving && (
+              <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-green-500/70">
+                <Icon name="CheckCircle" size={12} />
+                Результат сохранён в базе данных
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-6">
@@ -394,7 +431,7 @@ export default function ExamModule({ config = defaultExam, onClose }: ExamModule
             {formatTime(timeLeft)}
           </div>
           <button
-            onClick={() => setPhase("result")}
+            onClick={() => finishExam(answers, config.duration - timeLeft)}
             className="px-3 py-1.5 text-xs bg-primary text-white rounded hover:bg-primary/80 transition-colors"
           >
             Завершить
